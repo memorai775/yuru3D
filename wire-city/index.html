@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ワイヤーシティ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+body { margin: 0; }
+/* 夕暮れの街の一画面ゲーム。暗い見た目に固定。HUDは上、操作ボタンは右下 */
+:root {
+  --night: #1c1f36;
+  --panel: rgba(18, 20, 38, 0.78);
+  --text: #f4efe6;
+  --muted: #b3aec4;
+  --wire: #ffb547;
+  --ring: #5ce1e6;
+  --enemy: #ff4d6d;
+  --life: #7cf29a;
+  --beam: #6ff3ff;
+  --line: rgba(244, 239, 230, 0.35);
+  --font-display: 'Dela Gothic One', 'Hiragino Kaku Gothic StdN', system-ui, sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+#app { position: fixed; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: max(16px, env(safe-area-inset-left, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+.chip {
+  padding: 6px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font-weight: 700;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ring-icon {
+  width: 12px; height: 12px;
+  border: 3px solid var(--ring);
+  border-radius: 50%;
+}
+.speed { color: var(--wire); }
+
+#cross {
+  position: fixed;
+  left: 50%; top: 50%;
+  width: 22px; height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 2px solid rgba(244, 239, 230, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+}
+#cross::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 4px; height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--text);
+}
+#cross.lock { border-color: var(--wire); box-shadow: 0 0 10px var(--wire); }
+#cross.hit { border-color: var(--text); transform: scale(1.35); }
+
+.boss {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  display: grid;
+  gap: 5px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.bar {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid var(--line);
+  overflow: hidden;
+}
+.bar > i { display: block; height: 100%; width: 100%; background: var(--enemy); transition: width 0.12s; }
+.hpbar { width: 96px; }
+.hpbar > i { background: var(--life); }
+#hurt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 40px rgba(255, 40, 70, 0.75);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#hurt.on { opacity: 1; transition: none; }
+#charge {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 24px);
+  width: 90px; height: 6px;
+  margin-left: -45px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  pointer-events: none;
+}
+#charge > i { display: block; height: 100%; width: 100%; background: var(--beam); }
+#charge.cool > i { background: var(--muted); }
+#flash {
+  position: fixed;
+  inset: 0;
+  background: var(--beam);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+#flash.on { opacity: 0.5; transition: none; }
+
+.card-wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  background: rgba(10, 11, 24, 0.45);
+}
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 22px 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  display: grid;
+  gap: 12px;
+}
+.card h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 32px;
+  text-wrap: balance;
+}
+.card h1 span { color: var(--wire); }
+.card p { margin: 0; line-height: 1.75; font-size: 15px; }
+.keys { display: grid; gap: 4px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.keys b { color: var(--text); margin-right: 6px; }
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  background: var(--wire);
+  color: #2a1a05;
+  font-family: var(--font-display);
+  font-size: 20px;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+.btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.big { font-family: var(--font-display); font-size: 42px; font-variant-numeric: tabular-nums; }
+
+#stick-base {
+  position: fixed;
+  width: 120px; height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: rgba(18, 20, 38, 0.35);
+  pointer-events: none;
+}
+#stick-knob {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 50px; height: 50px;
+  margin: -25px 0 0 -25px;
+  border-radius: 50%;
+  background: rgba(244, 239, 230, 0.8);
+}
+.touch-btn {
+  position: fixed;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 16px;
+  padding: 0;
+}
+#fire {
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 4px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  width: 92px; height: 92px;
+  border-color: var(--enemy);
+  color: var(--enemy);
+}
+#fire.on { background: var(--enemy); color: #fff; }
+#beam {
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 104px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  width: 72px; height: 72px;
+  font-size: 13px;
+  border-color: var(--beam);
+  color: var(--beam);
+}
+#beam.on { background: var(--beam); color: #06343a; }
+#hook {
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 10px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 128px);
+  width: 80px; height: 80px;
+  border-color: var(--wire);
+  color: var(--wire);
+}
+#hook.on { background: var(--wire); color: #2a1a05; }
+#jump {
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 104px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  width: 72px; height: 72px;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+<canvas id="c" aria-label="一人称の3Dゲーム画面"></canvas>
+
+<div class="hud">
+  <span class="chip">HP<span class="bar hpbar"><i id="hp-fill"></i></span></span>
+  <span class="chip"><span id="time">0.0 秒</span><span class="speed" id="speed">0 km/h</span></span>
+</div>
+<div id="cross"></div>
+<div class="boss" id="boss-ui"><span>空中要塞ガルグ</span><span class="bar"><i id="boss-fill"></i></span></div>
+<div id="hurt"></div>
+<div id="flash"></div>
+<div id="charge"><i id="charge-fill"></i></div>
+
+<div id="stick-base" hidden><div id="stick-knob"></div></div>
+<button id="jump" class="touch-btn" type="button" hidden>ジャンプ</button>
+<button id="hook" class="touch-btn" type="button" hidden>フック</button>
+<button id="fire" class="touch-btn" type="button" hidden>撃つ</button>
+<button id="beam" class="touch-btn" type="button" hidden>波動砲</button>
+
+<div id="intro" class="card-wrap">
+  <div class="card">
+    <h1>ワイヤー<span>シティ</span></h1>
+    <p>街の上空に、巨大な空中要塞ガルグが現れた。ワイヤーでビルを飛び回りながら、銃で撃ち落とそう。赤く光る目が弱点。</p>
+    <div class="keys">
+      <div><b>PC</b>画面をクリックで視点ロック。左クリックで撃つ、右クリック長押し（または E キー）でフック、WASD で移動、スペースでジャンプ。Q を長押しでチャージ、離すと波動砲</div>
+      <div><b>スマホ</b>左側をドラッグで移動、右側をドラッグで見回す。「撃つ」「フック」は押している間ずっと効く。「波動砲」は長押しでチャージ、離すと発射</div>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">波動砲は反動がものすごいので、撃った反対方向に吹っ飛ぶ。移動にも使える。紫の弾は撃って消せる。空中の光のリングをくぐると HP が回復するよ。</p>
+    <button id="start" class="btn" type="button">スタート</button>
+    <a href="../" style="font-size:13px;color:inherit;opacity:.7;text-align:center">← ゲーム一覧にもどる</a>
+  </div>
+</div>
+
+<div id="finish" class="card-wrap" hidden>
+  <div class="card">
+    <h1 id="finish-title">ボス撃破！</h1>
+    <p id="finish-label">撃破タイム</p>
+    <div class="big" id="final-time">0.0 秒</div>
+    <p id="final-top" style="color:var(--muted)"></p>
+    <button id="again" class="btn" type="button">もう一回</button>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+(() => {
+
+  // ---- 横画面：スマホを縦に持っているときは、ゲーム全体を90度回して横向きで表示する ----
+  const View = {
+    rot: false, w: window.innerWidth, h: window.innerHeight,
+    update() {
+      const app = document.getElementById('app');
+      const W = window.innerWidth, H = window.innerHeight;
+      this.rot = H > W && window.matchMedia('(pointer: coarse)').matches;
+      if (this.rot) {
+        this.w = H; this.h = W;
+        app.style.width = H + 'px'; app.style.height = W + 'px';
+        app.style.transform = `translateX(${W}px) rotate(90deg)`;
+      } else {
+        this.w = W; this.h = H;
+        app.style.width = ''; app.style.height = ''; app.style.transform = '';
+      }
+    },
+    // 画面上のタッチ位置 → 回したゲーム画面の中の位置
+    pt(e) { return this.rot ? { x: e.clientY, y: window.innerWidth - e.clientX } : { x: e.clientX, y: e.clientY }; },
+  };
+  View.update();
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+
+  const SKY = 0x2b2d52;
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x6b4f6e, 60, 260);
+  const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 600);
+  camera.rotation.order = 'YXZ';
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- 夕焼けの空（大きな球の内側にグラデーション） ----
+  {
+    const geo = new THREE.SphereGeometry(500, 24, 16);
+    const top = new THREE.Color(SKY), mid = new THREE.Color(0x8a5a7a), low = new THREE.Color(0xff9a5c);
+    const colors = [];
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const t = pos.getY(i) / 500; // -1〜1
+      const c = t > 0.15 ? mid.clone().lerp(top, Math.min((t - 0.15) / 0.6, 1)) : low.clone().lerp(mid, Math.max((t + 0.1) / 0.25, 0));
+      colors.push(c.r, c.g, c.b);
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false })));
+    // 沈みかけの太陽
+    const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(28, 32), new THREE.MeshBasicMaterial({ color: 0xffd08a, fog: false }));
+    sunDisc.position.set(-300, 40, -380);
+    sunDisc.lookAt(0, 0, 0);
+    scene.add(sunDisc);
+  }
+
+  scene.add(new THREE.HemisphereLight(0xb9a6ff, 0x3a2a3a, 0.75));
+  const sun = new THREE.DirectionalLight(0xffb37a, 0.9);
+  sun.position.set(-3, 2, -4);
+  scene.add(sun);
+
+  // ---- 窓の模様（コードで描いた画像をビルの壁に貼る） ----
+  function windowTexture() {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#9aa0b8'; g.fillRect(0, 0, 64, 6);
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+      g.fillStyle = Math.random() < 0.35 ? '#ffd27a' : '#5b6488';
+      g.fillRect(6 + i * 30, 12 + j * 26, 22, 18);
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.magFilter = THREE.NearestFilter;
+    return tex;
+  }
+  const texes = [windowTexture(), windowTexture(), windowTexture()];
+
+  // 壁の大きさに合わせて窓の数を調整する
+  function scaleUV(geo, w, h, d) {
+    const uv = geo.attributes.uv;
+    const CELL = 6;
+    const sizes = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]]; // +x,-x,+y,-y,+z,-z
+    for (let f = 0; f < 6; f++) {
+      for (let v = 0; v < 4; v++) {
+        const i = f * 4 + v;
+        if (f === 2 || f === 3) { uv.setXY(i, 0.05, 0.95); continue; } // 屋上は無地
+        uv.setXY(i, uv.getX(i) * sizes[f][0] / CELL, uv.getY(i) * sizes[f][1] / CELL);
+      }
+    }
+    uv.needsUpdate = true;
+  }
+
+  // ---- 街 ----
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const BLOCK = 26, N = 5; // -N〜N の区画
+  const buildings = [];
+  const boxes = [];
+  const tints = [0xd8c6c0, 0xb8b4cc, 0xc9b7a3, 0x9fa9c2, 0xe0d2bf, 0xa99db5];
+  for (let i = -N; i <= N; i++) for (let j = -N; j <= N; j++) {
+    if (i === 0 && j === 0) continue; // 真ん中は広場
+    const cx = i * BLOCK, cz = j * BLOCK;
+    const near = Math.max(Math.abs(i), Math.abs(j));
+    const w = 10 + rnd() * 7, d = 10 + rnd() * 7;
+    const h = 18 + rnd() * 50 + (near <= 2 ? rnd() * 40 : 0);
+    const geo = new THREE.BoxGeometry(w, h, d);
+    scaleUV(geo, w, h, d);
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: tints[Math.floor(rnd() * tints.length)], map: texes[Math.floor(rnd() * 3)] }));
+    m.position.set(cx + (rnd() - 0.5) * 3, h / 2, cz + (rnd() - 0.5) * 3);
+    scene.add(m);
+    buildings.push(m);
+    boxes.push(new THREE.Box3().setFromObject(m));
+    // 屋上の小屋
+    if (rnd() < 0.5) {
+      const s = 2.5 + rnd() * 2;
+      const hut = new THREE.Mesh(new THREE.BoxGeometry(s, 2.5, s), new THREE.MeshLambertMaterial({ color: 0x6d6a80 }));
+      hut.position.set(m.position.x + (rnd() - 0.5) * (w - s - 1), h + 1.25, m.position.z + (rnd() - 0.5) * (d - s - 1));
+      scene.add(hut);
+      buildings.push(hut);
+      boxes.push(new THREE.Box3().setFromObject(hut));
+    }
+  }
+  const EXTENT = (N + 0.5) * BLOCK;
+
+  // 地面と道
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshLambertMaterial({ color: 0x2c2b3d }));
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+  const laneMat = new THREE.MeshBasicMaterial({ color: 0x55536e });
+  for (let k = -N; k < N; k++) {
+    const c = (k + 0.5) * BLOCK;
+    const a = new THREE.Mesh(new THREE.PlaneGeometry(0.4, EXTENT * 2), laneMat);
+    a.rotation.x = -Math.PI / 2; a.position.set(c, 0.02, 0); scene.add(a);
+    const b = new THREE.Mesh(new THREE.PlaneGeometry(EXTENT * 2, 0.4), laneMat);
+    b.rotation.x = -Math.PI / 2; b.position.set(0, 0.02, c); scene.add(b);
+  }
+
+  // ---- リング（くぐると HP 回復。しばらくすると復活） ----
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x5ce1e6 });
+  const doneMat = new THREE.MeshBasicMaterial({ color: 0x5ce1e6, transparent: true, opacity: 0.15 });
+  const rings = [];
+  const spots = new Set();
+  while (rings.length < 10) {
+    const i = Math.floor(rnd() * (2 * N)) - N, j = Math.floor(rnd() * (2 * N)) - N;
+    const key = i + ',' + j;
+    if (spots.has(key) || (Math.abs(i) <= 0 && Math.abs(j) <= 0)) continue;
+    spots.add(key);
+    const r = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.35, 8, 32), ringMat);
+    r.position.set((i + 0.5) * BLOCK, 14 + rnd() * 34, (j + 0.5) * BLOCK);
+    r.rotation.y = rnd() < 0.5 ? 0 : Math.PI / 2;
+    r.userData.done = false;
+    scene.add(r);
+    rings.push(r);
+  }
+
+  // ---- ワイヤー ----
+  const wireGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const wire = new THREE.Line(wireGeo, new THREE.LineBasicMaterial({ color: 0xffb547 }));
+  wire.frustumCulled = false;
+  wire.visible = false;
+  scene.add(wire);
+  const anchorDot = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffb547 }));
+  anchorDot.visible = false;
+  scene.add(anchorDot);
+
+  // ---- ボス：空中要塞ガルグ ----
+  const BOSS_HP = 160;
+  const boss = new THREE.Group();
+  const metal = new THREE.MeshLambertMaterial({ color: 0x3b3f58, emissive: 0xffffff, emissiveIntensity: 0 });
+  const metalLight = new THREE.MeshLambertMaterial({ color: 0x5d6280, emissive: 0xffffff, emissiveIntensity: 0 });
+  const coreMat = new THREE.MeshBasicMaterial({ color: 0xff4d6d });
+  const hull = new THREE.Mesh(new THREE.IcosahedronGeometry(7, 1), metal);
+  const spinner = new THREE.Group();
+  const beltRing = new THREE.Mesh(new THREE.TorusGeometry(9.5, 1.1, 8, 32), metalLight);
+  beltRing.rotation.x = Math.PI / 2;
+  spinner.add(beltRing);
+  for (let k = 0; k < 4; k++) {
+    const a = k * Math.PI / 2;
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(2, 1.4, 9), metalLight);
+    fin.position.set(Math.cos(a) * 13, 0, Math.sin(a) * 13);
+    fin.rotation.y = -a + Math.PI / 2;
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), coreMat);
+    lamp.position.set(Math.cos(a) * 17.8, 0, Math.sin(a) * 17.8);
+    spinner.add(fin, lamp);
+  }
+  const eye = new THREE.Group(); // いつもプレイヤーの方を向く
+  const socket = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 2, 20), metalLight);
+  socket.rotation.x = Math.PI / 2;
+  socket.position.z = 6.4;
+  const core = new THREE.Mesh(new THREE.SphereGeometry(2.6, 20, 14), coreMat);
+  core.position.z = 7.4;
+  eye.add(socket, core);
+  boss.add(hull, spinner, eye);
+  scene.add(boss);
+  const bossParts = [hull, socket, core, ...spinner.children];
+  const B = { hp: BOSS_HP, alive: true, angle: 0, fireT: 3, flash: 0, deathT: 0 };
+  const $bossFill = document.getElementById('boss-fill');
+  const $bossUI = document.getElementById('boss-ui');
+
+  // 撃破したときの爆発
+  const boomMat = new THREE.MeshBasicMaterial({ color: 0xffb547, transparent: true, fog: false });
+  const boom = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), boomMat);
+  boom.visible = false;
+  scene.add(boom);
+
+  // ボスの弾（紫の玉。撃って消せる）
+  const orbGeo = new THREE.SphereGeometry(0.9, 12, 8);
+  const orbMat = new THREE.MeshBasicMaterial({ color: 0xc77dff });
+  const orbs = [];
+  function fireOrb(from, dir) {
+    let o = orbs.find(x => !x.alive);
+    if (!o) { o = { mesh: new THREE.Mesh(orbGeo, orbMat), vel: new THREE.Vector3(), alive: false, life: 0 }; scene.add(o.mesh); orbs.push(o); }
+    o.mesh.position.copy(from);
+    o.vel.copy(dir).multiplyScalar(30);
+    o.alive = true; o.life = 7; o.mesh.visible = true;
+  }
+  const killOrb = (o) => { o.alive = false; o.mesh.visible = false; };
+
+  // ---- 銃（カメラにくっついて、いつも右下に見える） ----
+  scene.add(camera);
+  const gunMat = new THREE.MeshLambertMaterial({ color: 0x2b2e44, depthTest: false });
+  const gunAccent = new THREE.MeshBasicMaterial({ color: 0xffb547, depthTest: false });
+  const gun = new THREE.Group();
+  const gunPart = (geo, m, x, y, z, rx = 0) => { const g = new THREE.Mesh(geo, m); g.position.set(x, y, z); g.rotation.x = rx; g.renderOrder = 10; gun.add(g); return g; };
+  gunPart(new THREE.BoxGeometry(0.12, 0.14, 0.5), gunMat, 0, 0, -0.1);
+  gunPart(new THREE.CylinderGeometry(0.035, 0.035, 0.4, 8), gunMat, 0, 0.02, -0.5, Math.PI / 2);
+  gunPart(new THREE.BoxGeometry(0.13, 0.03, 0.3), gunAccent, 0, 0.085, -0.12);
+  gunPart(new THREE.BoxGeometry(0.09, 0.22, 0.1), gunMat, 0, -0.15, 0.06, 0.3);
+  const muzzle = gunPart(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff1b0, depthTest: false }), 0, 0.02, -0.76);
+  muzzle.visible = false;
+  gun.position.set(0.3, -0.28, -0.55);
+  camera.add(gun);
+
+  // 弾の軌跡と、当たったところの火花
+  const tracers = Array.from({ length: 8 }, () => {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xfff1b0, transparent: true }));
+    l.frustumCulled = false; l.visible = false; scene.add(l);
+    return { l, life: 0 };
+  });
+  const sparks = Array.from({ length: 8 }, () => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true }));
+    m.visible = false; scene.add(m);
+    return { m, life: 0 };
+  });
+  let tracerIdx = 0, sparkIdx = 0;
+
+  // ---- 波動砲 ----
+  const beamGeo = new THREE.CylinderGeometry(1, 1, 1, 18, 1, true);
+  beamGeo.translate(0, 0.5, 0);
+  beamGeo.rotateX(Math.PI / 2); // 根元から +z 方向へ長さ1
+  const beamOuterMat = new THREE.MeshBasicMaterial({ color: 0x6ff3ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
+  const beamInnerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false });
+  const beamOuter = new THREE.Mesh(beamGeo, beamOuterMat);
+  const beamInner = new THREE.Mesh(beamGeo, beamInnerMat);
+  const beamGroup = new THREE.Group();
+  beamGroup.add(beamOuter, beamInner);
+  beamGroup.visible = false;
+  scene.add(beamGroup);
+  const chargeBall = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), new THREE.MeshBasicMaterial({ color: 0x6ff3ff, transparent: true, opacity: 0.9, depthTest: false }));
+  chargeBall.renderOrder = 11;
+  chargeBall.position.set(0, 0.02, -0.8);
+  chargeBall.visible = false;
+  gun.add(chargeBall);
+  const BEAM_FULL = 1.5, BEAM_CD = 0; // クールタイム（秒）。0 で連射できる
+  let charge = 0, beamCD = 0, beamLife = 0, shake = 0;
+
+  // ---- プレイヤー ----
+  const START = new THREE.Vector3(0, 0.9, 6);
+  const P = {
+    pos: START.clone(), vel: new THREE.Vector3(),
+    yaw: 0, pitch: 0.15,
+    grounded: true,
+    anchor: null, ropeLen: 0,
+    playing: false, time: 0, got: 0, top: 0,
+    hp: 100, needRelease: false,
+  };
+  const RADIUS = 0.6, EYE = 0.7, GRAV = 24, JUMP = 9, PULL = 38, REEL = 6, MAXSPEED = 70;
+
+  // ---- 入力 ----
+  const keys = new Set();
+  let jumpQueued = false, hookHeld = false, fireHeld = false, beamHeld = false;
+  addEventListener('keydown', (e) => {
+    keys.add(e.code);
+    if (e.code === 'Space') { jumpQueued = true; e.preventDefault(); }
+    if (e.code === 'KeyE') hookHeld = true;
+    if (e.code === 'KeyF') fireHeld = true;
+    if (e.code === 'KeyQ') beamHeld = true;
+  });
+  addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    if (e.code === 'KeyE') hookHeld = false;
+    if (e.code === 'KeyF') fireHeld = false;
+    if (e.code === 'KeyQ') beamHeld = false;
+  });
+  addEventListener('blur', () => { keys.clear(); hookHeld = false; fireHeld = false; beamHeld = false; });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const touch = window.matchMedia('(pointer: coarse)').matches;
+  const hookBtn = document.getElementById('hook');
+  const jumpBtn = document.getElementById('jump');
+  const fireBtn = document.getElementById('fire');
+  const beamBtn = document.getElementById('beam');
+  hookBtn.hidden = jumpBtn.hidden = fireBtn.hidden = beamBtn.hidden = !touch;
+  const hold = (el, on, off) => {
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); on(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => el.addEventListener(t, off));
+  };
+  hold(hookBtn, () => { hookHeld = true; hookBtn.classList.add('on'); }, () => { hookHeld = false; hookBtn.classList.remove('on'); });
+  hold(jumpBtn, () => { jumpQueued = true; }, () => {});
+  hold(beamBtn, () => { beamHeld = true; beamBtn.classList.add('on'); }, () => { beamHeld = false; beamBtn.classList.remove('on'); });
+  hold(fireBtn, () => { fireHeld = true; fireBtn.classList.add('on'); }, () => { fireHeld = false; fireBtn.classList.remove('on'); });
+
+  const base = document.getElementById('stick-base'), knob = document.getElementById('stick-knob');
+  const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+  const look = { id: null, lx: 0, ly: 0 };
+  const locked = () => document.pointerLockElement === canvas;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!P.playing) return;
+    if (e.pointerType === 'mouse') {
+      if (!locked()) {
+        try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* ロックできない環境はドラッグで見回す */ }
+        look.id = e.pointerId; look.lx = View.pt(e).x; look.ly = View.pt(e).y;
+      }
+      if (e.button === 0) fireHeld = true;
+      if (e.button === 2) hookHeld = true;
+      if (e.button === 1) { beamHeld = true; e.preventDefault(); }
+      return;
+    }
+    if (View.pt(e).x < View.w * 0.45 && stick.id === null) {
+      stick.id = e.pointerId; stick.ox = View.pt(e).x; stick.oy = View.pt(e).y; stick.x = stick.y = 0;
+      base.style.left = View.pt(e).x + 'px'; base.style.top = View.pt(e).y + 'px';
+      knob.style.transform = ''; base.hidden = false;
+    } else if (look.id === null) {
+      look.id = e.pointerId; look.lx = View.pt(e).x; look.ly = View.pt(e).y;
+    }
+  });
+  addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse' && locked()) {
+      turn(e.movementX * 0.0022, e.movementY * 0.0022);
+      return;
+    }
+    if (e.pointerId === stick.id) {
+      let dx = View.pt(e).x - stick.ox, dy = View.pt(e).y - stick.oy;
+      const len = Math.hypot(dx, dy), max = 50;
+      if (len > max) { dx *= max / len; dy *= max / len; }
+      stick.x = dx / max; stick.y = dy / max;
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    } else if (e.pointerId === look.id) {
+      const k = e.pointerType === 'mouse' ? 0.004 : 0.006;
+      turn((View.pt(e).x - look.lx) * k, (View.pt(e).y - look.ly) * k);
+      look.lx = View.pt(e).x; look.ly = View.pt(e).y;
+    }
+  });
+  const up = (e) => {
+    if (e.pointerType === 'mouse' && e.button === 0) fireHeld = false;
+    if (e.pointerType === 'mouse' && e.button === 2) hookHeld = false;
+    if (e.pointerType === 'mouse' && e.button === 1) beamHeld = false;
+    if (e.pointerId === stick.id) { stick.id = null; stick.x = stick.y = 0; base.hidden = true; }
+    if (e.pointerId === look.id) look.id = null;
+  };
+  addEventListener('pointerup', up);
+  addEventListener('pointercancel', up);
+
+  function turn(dx, dy) {
+    P.yaw -= dx;
+    P.pitch = Math.max(-1.45, Math.min(1.45, P.pitch - dy));
+  }
+
+  // ---- 狙い（画面の中心から光線を飛ばして、当たったビルにワイヤーを刺す） ----
+  const ray = new THREE.Raycaster();
+  ray.far = 110;
+  const center = new THREE.Vector2(0, 0);
+  const $cross = document.getElementById('cross');
+  function aim() {
+    ray.setFromCamera(center, camera);
+    const hit = ray.intersectObjects(buildings, false)[0];
+    return hit ? hit.point.clone() : null;
+  }
+
+  // ---- 当たり判定（球と箱） ----
+  const tmp = new THREE.Vector3();
+  function collide() {
+    P.grounded = false;
+    for (const b of boxes) {
+      tmp.copy(P.pos).clamp(b.min, b.max);
+      const dx = P.pos.x - tmp.x, dy = P.pos.y - tmp.y, dz = P.pos.z - tmp.z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 >= RADIUS * RADIUS) continue;
+      let nx, ny, nz, depth;
+      if (d2 > 1e-8) {
+        const d = Math.sqrt(d2);
+        nx = dx / d; ny = dy / d; nz = dz / d; depth = RADIUS - d;
+      } else {
+        // 中にめりこんだ：いちばん近い面から押し出す
+        const opts = [
+          [P.pos.x - b.min.x, -1, 0, 0], [b.max.x - P.pos.x, 1, 0, 0],
+          [P.pos.y - b.min.y, 0, -1, 0], [b.max.y - P.pos.y, 0, 1, 0],
+          [P.pos.z - b.min.z, 0, 0, -1], [b.max.z - P.pos.z, 0, 0, 1],
+        ].sort((a, c) => a[0] - c[0])[0];
+        [, nx, ny, nz] = opts; depth = opts[0] + RADIUS;
+      }
+      P.pos.x += nx * depth; P.pos.y += ny * depth; P.pos.z += nz * depth;
+      const vn = P.vel.x * nx + P.vel.y * ny + P.vel.z * nz;
+      if (vn < 0) { P.vel.x -= vn * nx; P.vel.y -= vn * ny; P.vel.z -= vn * nz; }
+      if (ny > 0.6) P.grounded = true;
+    }
+    if (P.pos.y <= 0.9) { P.pos.y = 0.9; if (P.vel.y < 0) P.vel.y = 0; P.grounded = true; }
+    const lim = EXTENT + 30;
+    P.pos.x = Math.max(-lim, Math.min(lim, P.pos.x));
+    P.pos.z = Math.max(-lim, Math.min(lim, P.pos.z));
+  }
+
+  // ---- UI ----
+  const $time = document.getElementById('time'), $speed = document.getElementById('speed');
+  function reset() {
+    P.pos.copy(START); P.vel.set(0, 0, 0); P.yaw = 0; P.pitch = 0.15;
+    P.anchor = null; P.time = 0; P.got = 0; P.top = 0; P.hp = 100;
+    for (const r of rings) { r.userData.done = false; r.userData.cool = 0; r.material = ringMat; r.scale.set(1, 1, 1); }
+    B.hp = BOSS_HP; B.alive = true; B.angle = 0; B.fireT = 3; B.flash = 0; B.deathT = 0;
+    boss.visible = true; boss.rotation.set(0, 0, 0); boom.visible = false;
+    orbs.forEach(killOrb);
+    charge = 0; beamCD = 0; beamLife = 0; shake = 0; beamGroup.visible = false;
+    renderBars();
+  }
+  const $hpFill = document.getElementById('hp-fill');
+  const $hurt = document.getElementById('hurt');
+  function renderBars() {
+    $hpFill.style.width = `${Math.max(0, P.hp)}%`;
+    $bossFill.style.width = `${Math.max(0, B.hp / BOSS_HP * 100)}%`;
+  }
+  function damage(n) {
+    P.hp -= n;
+    renderBars();
+    $hurt.classList.add('on');
+    requestAnimationFrame(() => requestAnimationFrame(() => $hurt.classList.remove('on')));
+    if (P.hp <= 0) finish(false);
+  }
+  function hitBoss(n) {
+    B.hp -= n; B.flash = 1;
+    renderBars();
+    $cross.classList.add('hit');
+    clearTimeout(hitBoss.t);
+    hitBoss.t = setTimeout(() => $cross.classList.remove('hit'), 80);
+    if (B.hp <= 0 && B.alive) {
+      B.alive = false; B.deathT = 0;
+      orbs.forEach(killOrb);
+      boom.visible = true; boom.position.copy(boss.position);
+      setTimeout(() => finish(true), 2200);
+    }
+  }
+
+  // 波動砲：まっすぐ貫く太いビーム。ビルも突き抜けてボスに当たる。撃った反対へ吹っ飛ぶ
+  const $flash = document.getElementById('flash');
+  function fireBeam(power) {
+    camera.updateMatrixWorld();
+    shotRay.setFromCamera(center, camera);
+    const dir = shotRay.ray.direction.clone();
+    const from = muzzle.getWorldPosition(new THREE.Vector3());
+    const end = shotRay.ray.at(400, new THREE.Vector3());
+    if (B.alive) {
+      const hits = shotRay.intersectObjects(bossParts, false);
+      if (hits.length) hitBoss(Math.round((18 + power * 27) * (hits.some(h => h.object === core) ? 1.5 : 1)));
+    }
+    const radius = 1.5 + power * 3;
+    for (const o of orbs) if (o.alive && shotRay.ray.distanceToPoint(o.mesh.position) < radius) killOrb(o);
+
+    const w = 0.4 + power * 1.8;
+    beamGroup.position.copy(from);
+    beamGroup.lookAt(end);
+    beamGroup.scale.set(w, w, from.distanceTo(end));
+    beamGroup.visible = true;
+    beamLife = 0.55;
+
+    // 反動
+    P.anchor = null; P.needRelease = true;
+    P.vel.addScaledVector(dir, -(16 + power * 46));
+    P.vel.y += 3 * power;
+    P.grounded = false;
+    shake = 0.5 + power;
+    kick = 1;
+    if (!reduceMotion) { camera.fov += 8 + power * 16; camera.updateProjectionMatrix(); }
+    $flash.classList.add('on');
+    requestAnimationFrame(() => requestAnimationFrame(() => $flash.classList.remove('on')));
+  }
+
+  // 撃つ：画面の中心へまっすぐ（当たったものに火花）
+  const shotRay = new THREE.Raycaster();
+  shotRay.far = 400;
+  let fireCD = 0, kick = 0;
+  function shoot() {
+    shotRay.setFromCamera(center, camera);
+    const targets = [...buildings, ...orbs.filter(o => o.alive).map(o => o.mesh)];
+    if (B.alive) targets.push(...bossParts);
+    const hit = shotRay.intersectObjects(targets, false)[0];
+    const end = hit ? hit.point : shotRay.ray.at(400, new THREE.Vector3());
+    if (hit) {
+      if (bossParts.includes(hit.object)) hitBoss(hit.object === core ? 4 : 1);
+      else { const o = orbs.find(x => x.mesh === hit.object); if (o) killOrb(o); }
+      const sp = sparks[sparkIdx++ % sparks.length];
+      sp.m.position.copy(end); sp.life = 0.12; sp.m.visible = true;
+    }
+    camera.updateMatrixWorld();
+    const from = muzzle.getWorldPosition(new THREE.Vector3());
+    const t = tracers[tracerIdx++ % tracers.length];
+    const a = t.l.geometry.attributes.position;
+    a.setXYZ(0, from.x, from.y, from.z); a.setXYZ(1, end.x, end.y, end.z); a.needsUpdate = true;
+    t.life = 0.06; t.l.visible = true;
+    kick = 1;
+  }
+  document.getElementById('start').addEventListener('click', () => {
+    document.getElementById('intro').hidden = true;
+    reset(); P.playing = true;
+  });
+  document.getElementById('again').addEventListener('click', () => {
+    document.getElementById('finish').hidden = true;
+    reset(); P.playing = true;
+  });
+
+  // ---- 1コマごとの処理 ----
+  const fwd = new THREE.Vector3(), right = new THREE.Vector3(), hand = new THREE.Vector3();
+  function step(dt) {
+    // 移動入力（見ている向き基準）
+    let ix = stick.x, iz = stick.y;
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
+    if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) iz -= 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) iz += 1;
+    const il = Math.hypot(ix, iz);
+    if (il > 1) { ix /= il; iz /= il; }
+    if (!P.playing) { ix = iz = 0; }
+    fwd.set(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
+    right.set(Math.cos(P.yaw), 0, -Math.sin(P.yaw));
+    const wishX = (right.x * ix - fwd.x * iz), wishZ = (right.z * ix - fwd.z * iz);
+
+    if (P.grounded && !P.anchor) {
+      // 地面：すぐ思った方向へ
+      const k = 1 - Math.exp(-14 * dt);
+      P.vel.x += (wishX * 10 - P.vel.x) * k;
+      P.vel.z += (wishZ * 10 - P.vel.z) * k;
+    } else {
+      // 空中：少しだけ方向を変えられる
+      P.vel.x += wishX * 12 * dt;
+      P.vel.z += wishZ * 12 * dt;
+    }
+    if (jumpQueued && P.grounded && P.playing) { P.vel.y = JUMP; P.grounded = false; }
+    jumpQueued = false;
+
+    // フック
+    const target = P.playing ? aim() : null;
+    $cross.classList.toggle('lock', !!target && !P.anchor);
+    if (hookHeld && P.playing) {
+      if (!P.anchor && target && !P.needRelease) { P.anchor = target; P.ropeLen = target.distanceTo(P.pos); }
+    } else { P.anchor = null; P.needRelease = false; }
+
+    P.vel.y -= GRAV * dt;
+    if (P.anchor) {
+      // ワイヤーに引っぱられる＋巻き取り（振り子のように揺れながら近づく）
+      const to = tmp.copy(P.anchor).sub(P.pos);
+      const dist = to.length();
+      to.divideScalar(dist || 1);
+      P.vel.addScaledVector(to, PULL * dt);
+      P.ropeLen = Math.max(2.5, Math.min(P.ropeLen, dist) - REEL * dt);
+      if (dist > P.ropeLen) {
+        const out = -(P.vel.x * to.x + P.vel.y * to.y + P.vel.z * to.z);
+        if (out > 0) P.vel.addScaledVector(to, out);
+      }
+      if (dist < 2.2) { P.anchor = null; P.needRelease = true; } // 着いたら外れる（一度離すまで次は撃たない）
+    }
+    // 空気抵抗と速度の上限
+    if (!P.grounded) P.vel.multiplyScalar(Math.exp(-0.08 * dt));
+    if (P.vel.length() > MAXSPEED) P.vel.setLength(MAXSPEED);
+
+    P.pos.addScaledVector(P.vel, dt);
+    collide();
+
+    // カメラ
+    camera.position.set(P.pos.x, P.pos.y + EYE, P.pos.z);
+    camera.rotation.set(P.pitch, P.yaw, 0);
+    if (shake > 0) {
+      if (!reduceMotion) {
+        camera.rotation.x += (Math.random() - 0.5) * 0.06 * shake;
+        camera.rotation.y += (Math.random() - 0.5) * 0.06 * shake;
+        camera.rotation.z = (Math.random() - 0.5) * 0.05 * shake;
+      }
+      shake = Math.max(0, shake - dt * 2.2);
+    }
+    const spd = P.vel.length();
+    const fov = reduceMotion ? 75 : 75 + Math.min(spd, 55) * 0.35;
+    if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * (1 - Math.exp(-6 * dt)); camera.updateProjectionMatrix(); }
+
+    // ワイヤーの見た目（右手のあたりから伸びる）
+    wire.visible = anchorDot.visible = !!P.anchor;
+    if (P.anchor) {
+      camera.updateMatrixWorld();
+      hand.set(-0.35, -0.35, -0.6).applyMatrix4(camera.matrixWorld); // 左手から（右手は銃）
+      const a = wireGeo.attributes.position;
+      a.setXYZ(0, hand.x, hand.y, hand.z);
+      a.setXYZ(1, P.anchor.x, P.anchor.y, P.anchor.z);
+      a.needsUpdate = true;
+      anchorDot.position.copy(P.anchor);
+    }
+
+    // リング（回復）
+    const t = performance.now() / 1000;
+    for (const r of rings) {
+      if (r.userData.done) {
+        r.userData.cool -= dt;
+        if (r.userData.cool <= 0) { r.userData.done = false; r.material = ringMat; }
+        continue;
+      }
+      r.scale.setScalar(1 + Math.sin(t * 3 + r.position.x) * 0.04);
+      if (P.playing && r.position.distanceTo(P.pos) < 3.6 && P.hp < 100) {
+        r.userData.done = true; r.userData.cool = 20;
+        r.material = doneMat;
+        P.hp = Math.min(100, P.hp + 35);
+        renderBars();
+      }
+    }
+
+    // 銃
+    fireCD -= dt;
+    if (fireHeld && P.playing && fireCD <= 0) { shoot(); fireCD = 0.12; }
+    beamCD = Math.max(0, beamCD - dt);
+    if (beamHeld && P.playing && beamCD <= 0) charge = Math.min(BEAM_FULL, charge + dt);
+    else if (charge > 0) {
+      if (charge >= 0.3 && P.playing) { fireBeam(charge / BEAM_FULL); beamCD = BEAM_CD; }
+      charge = 0;
+    }
+    chargeBall.visible = charge > 0;
+    if (charge > 0) {
+      const c = charge / BEAM_FULL;
+      chargeBall.scale.setScalar(1 + c * 5 + Math.sin(t * 40) * 0.4 * c);
+    }
+    const $cf = document.getElementById('charge-fill');
+    $cf.style.width = `${charge > 0 ? charge / BEAM_FULL * 100 : beamCD > 0 ? (1 - beamCD / BEAM_CD) * 100 : 100}%`;
+    document.getElementById('charge').classList.toggle('cool', beamCD > 0 && charge === 0);
+    if (beamLife > 0) {
+      beamLife -= dt;
+      const k = Math.max(0, beamLife / 0.55);
+      beamOuterMat.opacity = 0.85 * k;
+      beamInnerMat.opacity = k;
+      beamOuter.scale.set(1 + (1 - k), 1 + (1 - k), 1);
+      beamInner.scale.set(0.45 * k, 0.45 * k, 1);
+      if (beamLife <= 0) beamGroup.visible = false;
+    }
+
+    kick = Math.max(0, kick - dt * (beamLife > 0 ? 4 : 12));
+    gun.position.x = 0.3 + (charge > 0 ? (Math.random() - 0.5) * 0.012 * charge : 0);
+    gun.position.z = -0.55 + kick * (beamLife > 0 ? 0.2 : 0.07);
+    gun.rotation.x = kick * 0.12;
+    muzzle.visible = kick > 0.6;
+    for (const tr of tracers) if (tr.life > 0) { tr.life -= dt; tr.l.material.opacity = Math.max(0, tr.life / 0.06); if (tr.life <= 0) tr.l.visible = false; }
+    for (const sp of sparks) if (sp.life > 0) { sp.life -= dt; sp.m.scale.setScalar(1 + (0.12 - sp.life) * 12); sp.m.material.opacity = Math.max(0, sp.life / 0.12); if (sp.life <= 0) sp.m.visible = false; }
+
+    // ボス：街の上空をゆっくり回りながら、紫の弾を撃ってくる
+    if (B.alive) {
+      const angry = B.hp < BOSS_HP / 2;
+      B.angle += dt * (angry ? 0.13 : 0.07);
+      boss.position.set(Math.cos(B.angle) * 55, 100 + Math.sin(t * 0.7) * 8, Math.sin(B.angle) * 55);
+      spinner.rotation.y += dt * (angry ? 1.2 : 0.5);
+      hull.rotation.y -= dt * 0.15;
+      eye.lookAt(camera.position);
+      B.flash = Math.max(0, B.flash - dt * 8);
+      metal.emissiveIntensity = metalLight.emissiveIntensity = B.flash * 0.6;
+      core.scale.setScalar(1 + Math.sin(t * (angry ? 9 : 4)) * 0.08);
+      B.fireT -= dt;
+      if (P.playing && B.fireT <= 0) {
+        B.fireT = angry ? 1.1 : 1.9;
+        const from = core.getWorldPosition(new THREE.Vector3());
+        const aimAt = P.pos.clone().addScaledVector(P.vel, 0.5);
+        const dir = aimAt.sub(from).normalize();
+        const side = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+        const n = angry ? 5 : 3;
+        for (let k = 0; k < n; k++) {
+          const off = (k - (n - 1) / 2) * 0.06;
+          fireOrb(from, dir.clone().addScaledVector(side, off).normalize());
+        }
+      }
+    } else if (B.deathT < 3) {
+      // 撃破：爆発して落ちていく
+      B.deathT += dt;
+      boss.position.y -= dt * (8 + B.deathT * 25);
+      boss.rotation.z += dt * 0.8; boss.rotation.x += dt * 0.4;
+      boom.scale.setScalar(2 + B.deathT * 45);
+      boomMat.opacity = Math.max(0, 1 - B.deathT / 1.2);
+      if (B.deathT > 1.2) boom.visible = false;
+      if (B.deathT > 2.6) boss.visible = false;
+    }
+    $bossUI.hidden = !P.playing && document.getElementById('intro').hidden === false;
+
+    // 紫の弾
+    for (const o of orbs) {
+      if (!o.alive) continue;
+      o.life -= dt;
+      o.mesh.position.addScaledVector(o.vel, dt);
+      const op = o.mesh.position;
+      if (o.life <= 0 || op.y < 0) { killOrb(o); continue; }
+      if (P.playing && op.distanceTo(P.pos) < 1.8) { killOrb(o); damage(14); continue; }
+      for (const b of boxes) if (b.containsPoint(op)) { killOrb(o); break; }
+    }
+
+    if (P.playing) {
+      P.time += dt;
+      P.top = Math.max(P.top, spd);
+      $time.textContent = `${P.time.toFixed(1)} 秒`;
+    }
+    $speed.textContent = `${Math.round(spd * 3.6)} km/h`;
+  }
+
+  function finish(win) {
+    if (!P.playing) return;
+    P.playing = false; P.anchor = null; hookHeld = false; fireHeld = false; beamHeld = false; charge = 0;
+    if (document.pointerLockElement) document.exitPointerLock();
+    document.getElementById('finish-title').textContent = win ? 'ボス撃破！' : 'やられた…';
+    document.getElementById('finish-label').textContent = win ? '撃破タイム' : 'ボスの残り HP';
+    document.getElementById('final-time').textContent = win ? `${P.time.toFixed(1)} 秒` : `${Math.ceil(Math.max(0, B.hp) / BOSS_HP * 100)}%`;
+    document.getElementById('final-top').textContent = `最高速度 ${Math.round(P.top * 3.6)} km/h`;
+    setTimeout(() => { document.getElementById('finish').hidden = false; }, 400);
+  }
+
+  function resize() {
+    View.update();
+    renderer.setSize(View.w, View.h, false);
+    camera.aspect = View.w / View.h;
+    camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // タイトル画面ではゆっくり見回す
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min((now - last) / 1000, 1 / 20);
+    last = now;
+    if (!P.playing && !document.getElementById('intro').hidden) P.yaw += dt * 0.12;
+    step(dt);
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
