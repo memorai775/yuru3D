@@ -203,7 +203,7 @@ body {
       <div><b>スマホ</b>画面の左側をドラッグで移動、右下のボタンで斬る・ジャンプ</div>
     </div>
     <button id="start" class="btn" type="button">はじめる</button>
-    <a href="../" style="font-size:13px;color:inherit;opacity:.7;text-align:center">← ゲーム一覧にもどる</a>
+    <a href="../index.html" style="font-size:13px;color:inherit;opacity:.7;text-align:center">← ゲーム一覧にもどる</a>
     <p class="note">画像ファイルは1枚も使っていません。島もキャラも雲も、Three.js のコードだけで組み立てています。</p>
   </div>
 </div>
@@ -215,8 +215,10 @@ body {
     <div class="big-time" id="final-time">0.0 秒</div>
     <p id="finish-sub"></p>
     <button id="again" class="btn" type="button">もう一回</button>
+    <a href="../index.html" style="font-size:13px;color:inherit;opacity:.7;text-align:center">← ゲーム一覧にもどる</a>
   </div>
 </div>
+<a href="../index.html" id="back-float" style="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);transform:translateX(-50%);padding:4px 12px;border-radius:999px;background:rgba(0,0,0,.35);color:rgba(255,255,255,.75);font:12px system-ui,sans-serif;text-decoration:none;z-index:4">← 一覧</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
