@@ -593,8 +593,18 @@ body {
   const touch = window.matchMedia('(pointer: coarse)').matches;
   const fireBtn = document.getElementById('fire'), reloadBtn = document.getElementById('reload');
   fireBtn.hidden = reloadBtn.hidden = !touch;
-  fireBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fireHeld = true; fireBtn.classList.add('on'); });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => fireBtn.addEventListener(t, () => { fireHeld = false; fireBtn.classList.remove('on'); }));
+  fireBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    fireHeld = true; fireBtn.classList.add('on');
+    // 撃ちながら指をずらすと、そのまま見回せる
+    try { fireBtn.setPointerCapture(e.pointerId); } catch (err) { /* 未対応のブラウザ */ }
+    const q = View.pt(e);
+    look.id = e.pointerId; look.lx = q.x; look.ly = q.y;
+  });
+  ['pointerup', 'pointercancel'].forEach(t => fireBtn.addEventListener(t, (e) => {
+    fireHeld = false; fireBtn.classList.remove('on');
+    if (look.id === e.pointerId) look.id = null;
+  }));
   reloadBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); startReload(); });
 
   const base = document.getElementById('stick-base'), knob = document.getElementById('stick-knob');

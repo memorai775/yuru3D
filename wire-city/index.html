@@ -605,9 +605,18 @@ body {
   const fireBtn = document.getElementById('fire');
   const beamBtn = document.getElementById('beam');
   hookBtn.hidden = jumpBtn.hidden = fireBtn.hidden = beamBtn.hidden = !touch;
+  // ボタンを押したまま指をずらすと、そのまま見回せる（撃ちながら・フックしながら狙える）
   const hold = (el, on, off) => {
-    el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); on(); });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => el.addEventListener(t, off));
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); on();
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* 未対応のブラウザ */ }
+      const q = View.pt(e);
+      look.id = e.pointerId; look.lx = q.x; look.ly = q.y;
+    });
+    ['pointerup', 'pointercancel'].forEach(t => el.addEventListener(t, (e) => {
+      off();
+      if (look.id === e.pointerId) look.id = null;
+    }));
   };
   hold(hookBtn, () => { hookHeld = true; hookBtn.classList.add('on'); }, () => { hookHeld = false; hookBtn.classList.remove('on'); });
   hold(jumpBtn, () => { jumpQueued = true; }, () => {});
