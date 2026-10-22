@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ブラウザ3Dゲーム集</title>
+<meta name="description" content="ブラウザですぐ遊べる3Dゲーム集。浮島さんぽ・ワイヤーシティ・ゾンビナイトの3本。無料・登録なし・スマホOK。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+:root {
+  --bg: #12131f;
+  --card: #1c1e30;
+  --text: #f2efe6;
+  --muted: #a6a3b8;
+  --line: rgba(242, 239, 230, 0.14);
+  --font-display: 'Dela Gothic One', 'Hiragino Kaku Gothic StdN', system-ui, sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px;
+}
+main { max-width: 960px; margin: 0 auto; display: grid; gap: 28px; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 6vw, 46px); letter-spacing: 0.02em; }
+.lead { margin: 6px 0 0; color: var(--muted); line-height: 1.7; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.game {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.game:hover, .game:focus-visible { transform: translateY(-3px); border-color: var(--accent); outline: none; }
+.art { height: 130px; background: var(--art); position: relative; }
+.art span {
+  position: absolute; left: 16px; bottom: 12px;
+  font-family: var(--font-display); font-size: 13px; letter-spacing: 0.1em;
+  padding: 3px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: #fff;
+}
+.body { padding: 16px; display: grid; gap: 8px; align-content: start; }
+.body h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 24px; color: var(--accent); }
+.body p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--muted); }
+.play { margin-top: 4px; font-weight: 700; font-size: 14px; color: var(--text); }
+footer { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>ブラウザ3Dゲーム集</h1>
+    <p class="lead">インストールなし、登録なし。ブラウザですぐ遊べる3Dゲームです。スマホは横持ちで遊んでね。</p>
+  </header>
+
+  <div class="grid">
+    <a class="game" href="ukishima/" style="--accent:#ff7a4d;--art:linear-gradient(160deg,#9fd3ea 0%,#9fd3ea 55%,#7cc46a 55%,#5f9a52 100%)">
+      <div class="art"><span>アクション</span></div>
+      <div class="body">
+        <h2>浮島さんぽ</h2>
+        <p>空に浮かぶ島で、剣を振ってスライムをたおしながら、クリスタルを8個あつめよう。</p>
+        <span class="play">あそぶ →</span>
+      </div>
+    </a>
+    <a class="game" href="wire-city/" style="--accent:#ffb547;--art:linear-gradient(180deg,#2b2d52 0%,#8a5a7a 60%,#ff9a5c 100%)">
+      <div class="art"><span>一人称・空中戦</span></div>
+      <div class="body">
+        <h2>ワイヤーシティ</h2>
+        <p>ワイヤーでビル街を飛び回り、反動で吹っ飛ぶ波動砲で空中要塞を撃ち落とせ。</p>
+        <span class="play">あそぶ →</span>
+      </div>
+    </a>
+    <a class="game" href="zombie-night/" style="--accent:#9bd46a;--art:radial-gradient(circle at 75% 25%,#e8ecff 0 14px,transparent 15px),linear-gradient(180deg,#0b1220 0%,#1d2a1c 100%)">
+      <div class="art"><span>一人称・シューティング</span></div>
+      <div class="body">
+        <h2>ゾンビナイト</h2>
+        <p>夜の墓地で迫りくるゾンビを撃ちまくれ。ウェーブの合間にショップで強化して、どこまで生き残れるか。</p>
+        <span class="play">あそぶ →</span>
+      </div>
+    </a>
+  </div>
+
+  <footer>Three.js で作っています。画像ファイルは使わず、島もキャラも街も全部コードで組み立てています。</footer>
+</main>
+</body>
+</html>
